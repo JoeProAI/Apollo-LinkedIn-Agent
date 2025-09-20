@@ -27,7 +27,7 @@ class ApolloLinkedInAgent {
       person_locations: [location],
       person_seniorities: Array.isArray(seniority) ? seniority : [seniority],
       person_titles: Array.isArray(titles) ? titles : titles.split(',').map(t => t.trim()),
-      page: 1,
+      page: options.page || 1,
       per_page: Math.min(limit, 50)
     };
 

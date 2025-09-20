@@ -30,17 +30,30 @@ export default async function handler(req, res) {
       location = 'United States',
       seniority = ['entry', 'junior'],
       titles = ['software engineer', 'developer', 'analyst', 'associate', 'intern', 'graduate', 'new grad'],
-      limit = 25
+      limit = 25,
+      page = 1,
+      excludeCompanies = [],
+      searchVariation = 'default'
     } = req.body;
 
     const agent = new ApolloLinkedInAgent(apiKey);
     
+    // Add search variations to get different results
+    const keywordVariations = {
+      'default': keywords,
+      'visa_focus': 'visa sponsorship OR work authorization OR OPT OR F1 OR H1B OR international student',
+      'new_grad': 'new graduate OR recent graduate OR entry level OR junior developer OR graduate program',
+      'university': 'university graduate OR college graduate OR masters degree OR bachelors degree',
+      'tech_specific': 'software engineer graduate OR developer new grad OR computer science graduate'
+    };
+
     const searchOptions = {
-      keywords,
+      keywords: keywordVariations[searchVariation] || keywords,
       location,
       seniority: Array.isArray(seniority) ? seniority : seniority.split(','),
       titles: Array.isArray(titles) ? titles : titles.split(',').map(t => t.trim()),
-      limit: parseInt(limit)
+      limit: parseInt(limit),
+      page: parseInt(page)
     };
 
     const result = await agent.searchInternationalGraduates(searchOptions);

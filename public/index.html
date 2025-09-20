@@ -62,7 +62,19 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Limit</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Search Type</label>
+                        <select x-model="searchParams.searchVariation" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="default">Default Search</option>
+                            <option value="visa_focus">Visa/Sponsorship Focus</option>
+                            <option value="new_grad">New Graduate Focus</option>
+                            <option value="university">University Graduate</option>
+                            <option value="tech_specific">Tech Specific</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Results Per Page</label>
                         <select x-model="searchParams.limit" 
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="10">10 candidates</option>
@@ -87,8 +99,14 @@
         <div x-show="results.length > 0" class="bg-white rounded-lg shadow-md p-6">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-semibold">Search Results</h2>
-                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                      x-text="`${results.length} candidates found`"></span>
+                <div class="flex items-center space-x-3">
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
+                          x-text="`${results.length} candidates found`"></span>
+                    <button @click="tryDifferentSearch()" 
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm">
+                        Try Different Search
+                    </button>
+                </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -116,6 +134,16 @@
                     </div>
                 </template>
             </div>
+            
+            <!-- Load More Button -->
+            <div class="text-center mt-6">
+                <button @click="loadMoreCandidates()" 
+                        :disabled="searching"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg disabled:opacity-50">
+                    <span x-show="!searching">Load More Candidates</span>
+                    <span x-show="searching">Loading...</span>
+                </button>
+            </div>
         </div>
 
         <!-- Error Display -->
@@ -132,8 +160,12 @@
                     location: 'United States',
                     seniority: 'entry,junior',
                     titles: 'software engineer, developer, analyst, associate, intern, graduate, new grad',
-                    limit: 25
+                    limit: 25,
+                    page: 1,
+                    searchVariation: 'default'
                 },
+                currentPage: 1,
+                seenCandidates: new Set(),
                 results: [],
                 searching: false,
                 testing: false,
@@ -164,10 +196,15 @@
                     this.testing = false;
                 },
 
-                async searchCandidates() {
+                async searchCandidates(newSearch = true) {
                     this.searching = true;
                     this.error = '';
-                    this.results = [];
+                    
+                    if (newSearch) {
+                        this.results = [];
+                        this.currentPage = 1;
+                        this.searchParams.page = 1;
+                    }
                     
                     try {
                         const response = await fetch('/api/search', {
@@ -175,13 +212,30 @@
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(this.searchParams)
+                            body: JSON.stringify({
+                                ...this.searchParams,
+                                page: this.currentPage
+                            })
                         });
                         
                         const data = await response.json();
                         
                         if (data.success) {
-                            this.results = data.candidates;
+                            // Filter out candidates we've already seen
+                            const newCandidates = data.candidates.filter(candidate => {
+                                const key = candidate.linkedin_url;
+                                if (this.seenCandidates.has(key)) {
+                                    return false;
+                                }
+                                this.seenCandidates.add(key);
+                                return true;
+                            });
+                            
+                            if (newSearch) {
+                                this.results = newCandidates;
+                            } else {
+                                this.results = [...this.results, ...newCandidates];
+                            }
                         } else {
                             this.error = data.error || 'Search failed';
                         }
@@ -190,6 +244,19 @@
                     }
                     
                     this.searching = false;
+                },
+
+                loadMoreCandidates() {
+                    this.currentPage++;
+                    this.searchCandidates(false);
+                },
+
+                tryDifferentSearch() {
+                    const variations = ['visa_focus', 'new_grad', 'university', 'tech_specific', 'default'];
+                    const currentIndex = variations.indexOf(this.searchParams.searchVariation);
+                    const nextIndex = (currentIndex + 1) % variations.length;
+                    this.searchParams.searchVariation = variations[nextIndex];
+                    this.searchCandidates(true);
                 }
             }
         }
