@@ -41,10 +41,10 @@ export default async function handler(req, res) {
     // Add search variations to get different results
     const keywordVariations = {
       'default': keywords,
-      'visa_focus': 'visa sponsorship OR work authorization OR OPT OR F1 OR H1B OR international student',
-      'new_grad': 'new graduate OR recent graduate OR entry level OR junior developer OR graduate program',
-      'university': 'university graduate OR college graduate OR masters degree OR bachelors degree',
-      'tech_specific': 'software engineer graduate OR developer new grad OR computer science graduate'
+      'visa_focus': 'visa OR sponsorship OR OPT OR F1 OR H1B OR international OR work authorization',
+      'new_grad': 'graduate OR entry OR junior OR new grad OR recent graduate OR entry level',
+      'university': 'university OR college OR masters OR bachelors OR student OR graduate',
+      'tech_specific': 'software OR developer OR engineer OR programming OR computer science'
     };
 
     const searchOptions = {
@@ -56,16 +56,23 @@ export default async function handler(req, res) {
       page: parseInt(page)
     };
 
+    console.log('Search options:', searchOptions);
+    console.log('Using keywords:', keywordVariations[searchVariation]);
+    
     const result = await agent.searchInternationalGraduates(searchOptions);
 
     if (result.success) {
+      console.log(`Found ${result.profiles.length} candidates for variation: ${searchVariation}`);
       res.status(200).json({
         success: true,
         candidates: result.profiles,
         total: result.profiles.length,
-        searchParams: result.searchParams
+        searchParams: result.searchParams,
+        searchVariation: searchVariation,
+        keywordsUsed: keywordVariations[searchVariation]
       });
     } else {
+      console.error('Search failed:', result.error);
       res.status(500).json({
         success: false,
         error: result.error
