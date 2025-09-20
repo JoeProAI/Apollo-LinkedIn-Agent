@@ -11,10 +11,11 @@ yarn-error.log*
 
 # Results and output files
 results/
-*.json
-*.md
+results/*.json
+results/*.md
 !README.md
 !package.json
+!vercel.json
 
 # Logs
 logs
